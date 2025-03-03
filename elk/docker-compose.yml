@@ -1,0 +1,62 @@
+services:
+  elasticsearch:
+    image: elasticsearch:8.17.2
+    container_name: pesquisa-elasticsearch
+    environment:
+      - "discovery.type=single-node"
+      - xpack.security.enabled=true
+      - ELASCTIC_USERNAME=elastic
+      - ELASTIC_PASSWORD=escolhaUmaSenha
+      - xpack.security.enabled=true
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    expose:
+      - "9200:9200"
+    networks:
+      - elk
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.10.2
+    container_name: pesquisa-kibana
+    environment:
+      - SERVER_NAME=kibana
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=kibana_system_user
+      - ELASTICSEARCH_PASSWORD=escolhaUmaSenha
+      - XPACK_SECURITY_ENABLED=true
+    expose:
+      - 5601
+    depends_on:
+      - elasticsearch
+    networks:
+      - elk
+      - reverseproxy
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.10.2
+    container_name: pesquisa-logstash
+    volumes:
+      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+    ports:
+      - "5044:5044"
+    expose:
+      - 5501
+    depends_on:
+      - elasticsearch
+    networks:
+      - elk
+
+volumes:
+  elasticsearch_data:
+
+networks:
+  elk:
+    driver: bridge
+  reverseproxy:
+    external: true
